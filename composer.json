@@ -1,0 +1,24 @@
+{
+  "name": "flycartinc/wdr-wpml-compatibility",
+  "description": "WPML compatibility add-on.",
+  "version": "1.0.0",
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "type": "wordpress-plugin",
+  "authors": [
+    {
+      "name": "Anantharaj B",
+      "email": "anantharaj@flycart.org"
+    }
+  ],
+  "license": "GPL-3.0-or-later",
+  "autoload": {
+    "psr-4": {
+      "WDR_WPML\\": "src/"
+    }
+  },
+  "require": {
+    "ext-json": "*",
+    "yahnis-elsts/plugin-update-checker": "^5.4"
+  }
+}
