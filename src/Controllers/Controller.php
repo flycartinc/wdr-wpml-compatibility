@@ -57,10 +57,6 @@ class Controller
         if (!empty($current_language) && method_exists('\WDR\Core\Helpers\WC', 'setSession')) {
             \WDR\Core\Helpers\WC::setSession('wdr_processed_wpml_language', $current_language);
         }
-
-        if ($changes_detected && method_exists('\WDR\Core\Models\WC\Cart', 'calculateTotals')) {
-            \WDR\Core\Models\WC\Cart::calculateTotals();
-        }
     }
 
     /**
