@@ -9,6 +9,13 @@ defined('ABSPATH') || exit;
 class Controller
 {
     /**
+     * To hold removed item key and product id.
+     *
+     * @var array
+     */
+    private static $removed_items = [];
+
+    /**
      * Load active languages.
      *
      * @return array
@@ -68,17 +75,24 @@ class Controller
             return;
         }
 
+        global $woocommerce;
         $current_language = apply_filters('wpml_current_language', '');
         $processed_language = \WDR\Core\Helpers\WC::getSession('wdr_processed_wpml_language', '');
         if (!empty($current_language) && !empty($processed_language) && $current_language != $processed_language) {
-            global $woocommerce;
             $auto_added_items = \WDR\Core\Helpers\WC::getSession('wdr_auto_added_items', []);
             if (!empty($auto_added_items) && is_object($woocommerce) && isset($woocommerce->cart)) {
                 foreach ($auto_added_items as $key => $data) {
+                    self::$removed_items[$key] = $woocommerce->cart->cart_contents[$key]['product_id'];
                     unset($woocommerce->cart->cart_contents[$key]);
                 }
                 \WDR\Core\Helpers\WC::setSession('wdr_auto_added_items', null);
                 \WDR\Core\Helpers\WC::setSession('wdr_processed_wpml_language', $current_language);
+            }
+        } elseif (!empty(self::$removed_items) && is_object($woocommerce) && isset($woocommerce->cart)) {
+            foreach (self::$removed_items as $key => $product_id) {
+                if (isset($woocommerce->cart->cart_contents[$key]['product_id']) && $woocommerce->cart->cart_contents[$key]['product_id'] == $product_id) {
+                    unset($woocommerce->cart->cart_contents[$key]);
+                }
             }
         }
     }
