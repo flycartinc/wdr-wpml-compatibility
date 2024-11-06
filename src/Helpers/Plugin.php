@@ -143,7 +143,7 @@ class Plugin
             $error = self::getDependenciesError(['plugins' => [[
                 'name' => 'Discount Rules PRO',
                 'version' => $requires['wdr_pro'],
-                'file' => 'woo-discount-rules-pro/woo-discount-rules-pro.php',
+                'file' => 'woo-discount-rules/woo-discount-rules-pro.php',
                 'url' => 'https://www.flycart.org/products/wordpress/woocommerce-discount-rules',
             ]]], $plugin_name);
             if ($error !== false) {
