@@ -93,11 +93,14 @@ class Plugin
      */
     public static function getDependenciesError($requires, $plugin_name = '')
     {
-        $package_requirement_short = __('Requires %s plugin.', 'wdr-wpml-compatibility');
-        $package_requirement = __('%1$s requires %2$s plugin to be installed and active.', 'wdr-wpml-compatibility');
-
+	    /* translators: %s: require plugin name */
+	    $package_requirement_short = __('Requires %s plugin.', 'wdr-wpml-compatibility');
+	    /* translators: 1:  plugin name 2: require plugin name */
+	    $package_requirement = __('%1$s requires %2$s plugin to be installed and active.', 'wdr-wpml-compatibility');
+	    /* translators: 1:  plugin name 2: require plugin version  */
         $version_requirement_short = __('Requires %1$s version %2$s or above.', 'wdr-wpml-compatibility');
-        $version_requirement = __('%1$s requires %2$s version %3$s or above.', 'wdr-wpml-compatibility');
+	    /* translators: 1:  plugin name 2: require plugin name 3: require plugin version */
+	    $version_requirement = __('%1$s requires %2$s version %3$s or above.', 'wdr-wpml-compatibility');
 
         if (!empty($requires['php'])) {
             if (!version_compare(PHP_VERSION, $requires['php'], '>=')) {

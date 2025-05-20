@@ -17,7 +17,7 @@ copy_folder() {
   fi
   mkdir "$pack_folder"
   mkdir "$compress_plugin_folder"
-  move_dir=("App" "Assets" "i18n" "vendor" "wdr-wpml-compatibility.php")
+  move_dir=( "src"  "i18n" "vendor" "wdr-wpml-compatibility.php")
   # shellcheck disable=SC2068
   for dir in ${move_dir[@]}; do
     cp -r "$current_dir/$dir" "$compress_plugin_folder/$dir"

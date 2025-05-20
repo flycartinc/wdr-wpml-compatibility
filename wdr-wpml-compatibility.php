@@ -16,6 +16,13 @@
 
 defined('ABSPATH') || exit;
 
+// declare WooCommerce feature compatibility
+add_action('before_woocommerce_init', function () {
+	if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+	}
+});
+
 if(!function_exists('wdr_v2_is_plugin_active')){
 	function wdr_v2_is_plugin_active($plugin_file){
 		$active_plugins = apply_filters('active_plugins', get_option('active_plugins', array()));
@@ -77,3 +84,4 @@ if (class_exists('YahnisElsts\PluginUpdateChecker\v5\PucFactory')) {
     $updater->setBranch('master');
     $updater->getVcsApi()->enableReleaseAssets();
 }
+
