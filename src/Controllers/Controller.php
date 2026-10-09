@@ -124,7 +124,6 @@ class Controller
     public static function allowSuppressedHooks($allowed_hooks)
     {
         $allowed_hooks = (array)$allowed_hooks;
-        $allowed_hooks['woocommerce_before_calculate_totals'][] = 'WCML_Cart|woocommerce_calculate_totals';
         $allowed_hooks['woocommerce_before_calculate_totals'][] = __CLASS__ . '|removeInvalidAutoAddProducts';
         return $allowed_hooks;
     }
