@@ -119,6 +119,45 @@ class Controller
     }
 
     /**
+     * A gift the shopper picked (Buy X get Y gift) belongs to the language it was picked in: on a language switch its line goes —
+     * before WooCommerce Multilingual moves it to the translation — and the shopper picks again from the new language's gifts
+     * (pending-task 95). Unset, not removed through WooCommerce, so it does not count as the shopper's own removal.
+     *
+     * @param \WC_Cart $cart
+     */
+    public static function removeOtherLanguageChosenGifts($cart)
+    {
+        if (!is_object($cart) || empty($cart->cart_contents)) {
+            return;
+        }
+        foreach ($cart->cart_contents as $key => $item) {
+            if (($item['wdr_gift_type'] ?? '') === 'choose' && !WPML::isCurrentLanguageProduct((int)(!empty($item['variation_id']) ? $item['variation_id'] : $item['product_id']))) {
+                unset($cart->cart_contents[$key]);
+            }
+        }
+    }
+
+    /**
+     * The variations Discount Rules tries for a free variable product (Buy X get Y — Products, first purchasable one added): a free
+     * line of one of them already in the cart goes first. On a language switch WooCommerce Multilingual moves the shopper's chosen
+     * size (D‑M) to the translation (D‑M‑ta), but the engine knows the line by the original product and adds the new language's
+     * product afresh — so it adds that size, not the first one (pending-task 96).
+     *
+     * @param array $variation_ids
+     * @return array
+     */
+    public static function preferMovedFreeVariation($variation_ids)
+    {
+        $variation_ids = array_map('intval', (array)$variation_ids);
+        foreach (\WDR\Core\Models\WC\Cart::getItems() as $item) {
+            if (!empty($item['wdr_free_item']) && !empty($item['variation_id']) && in_array((int)$item['variation_id'], $variation_ids, true)) {
+                return array_values(array_unique(array_merge([(int)$item['variation_id']], $variation_ids)));
+            }
+        }
+        return $variation_ids;
+    }
+
+    /**
      * Filter different language product ids.
      *
      * @param array $product_ids
@@ -152,6 +191,7 @@ class Controller
     {
         $allowed_hooks = (array)$allowed_hooks;
         $allowed_hooks['woocommerce_before_calculate_totals'][] = __CLASS__ . '|removeInvalidAutoAddProducts';
+        $allowed_hooks['woocommerce_before_calculate_totals'][] = __CLASS__ . '|removeOtherLanguageChosenGifts';
         return $allowed_hooks;
     }
 
