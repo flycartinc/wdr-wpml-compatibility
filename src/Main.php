@@ -22,6 +22,12 @@ class Main
         add_action('wdr_auto_add_products_added', [Controller::class, 'recalculateTotal']);
         add_action('woocommerce_before_calculate_totals', [Controller::class, 'removeInvalidAutoAddProducts']);
 
+        // a free variable product keeps the size the shopper chose when the language switches
+        add_filter('wdr_free_product_variation_ids', [Controller::class, 'preferMovedFreeVariation']);
+
+        // a picked gift is picked again in the new language
+        add_action('woocommerce_before_calculate_totals', [Controller::class, 'removeOtherLanguageChosenGifts']);
+
         // cart lines WooCommerce Multilingual moved to another language
         add_filter('wcml_cart_contents', [Controller::class, 'translateSwitchedItemTerms'], 10, 4);
 
