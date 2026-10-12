@@ -22,6 +22,9 @@ class Main
         add_action('wdr_auto_add_products_added', [Controller::class, 'recalculateTotal']);
         add_action('woocommerce_before_calculate_totals', [Controller::class, 'removeInvalidAutoAddProducts']);
 
+        // cart lines WooCommerce Multilingual moved to another language
+        add_filter('wcml_cart_contents', [Controller::class, 'translateSwitchedItemTerms'], 10, 4);
+
         // cross-sell hooks
         add_filter('wdr_cross_sells_product_ids', [Controller::class, 'filterInvalidProductIds']);
 

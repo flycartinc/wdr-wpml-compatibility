@@ -92,6 +92,33 @@ class Controller
     }
 
     /**
+     * WooCommerce Multilingual moves a cart line to its translation by changing the product object's id only (`set_id`),
+     * so the object keeps the original's categories, tags and attributes, and WDR's term filters and conditions keep
+     * matching the old language until the cart changes. Give the object the translation's terms; prices stay as they are.
+     * A variation reads its terms through the parent id (already the translation's) and its attributes from the line's
+     * translated `variation` slugs.
+     *
+     * @param array $cart_contents The new cart contents.
+     * @param array $old_cart_contents The cart contents before the switch.
+     * @param string $key The line's old key.
+     * @param string $new_key The line's new key.
+     * @return array
+     */
+    public static function translateSwitchedItemTerms($cart_contents, $old_cart_contents, $key, $new_key)
+    {
+        $item = $cart_contents[$new_key] ?? [];
+        if (empty($item['variation_id']) && isset($item['data']) && $item['data'] instanceof \WC_Product) {
+            $translation = wc_get_product($item['product_id']);
+            if ($translation) {
+                $item['data']->set_category_ids($translation->get_category_ids());
+                $item['data']->set_tag_ids($translation->get_tag_ids());
+                $item['data']->set_attributes($translation->get_attributes());
+            }
+        }
+        return $cart_contents;
+    }
+
+    /**
      * Filter different language product ids.
      *
      * @param array $product_ids
