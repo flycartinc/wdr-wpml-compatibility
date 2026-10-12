@@ -36,6 +36,7 @@ class WPML
     {
         $product_id = is_object($product) && is_a($product, 'WC_Product') ? $product->get_id() : (int)$product;
         $language_info = apply_filters('wpml_post_language_details', array(), $product_id);
-        return empty($language_info['different_language']);
+        // WPML returns a WP_Error for unknown posts; fail open like missing language info.
+        return !is_array($language_info) || empty($language_info['different_language']);
     }
 }

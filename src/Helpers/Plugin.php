@@ -29,6 +29,91 @@ class Plugin
     }
 
     /**
+     * Check every requirement of this addon (PHP, WordPress, WooCommerce, Woo Discount Rules
+     * running in v3 mode, WPML) and show an admin notice for the first one that fails.
+     *
+     * @param string $plugin_name
+     * @return bool
+     */
+    public static function checkAddonDependencies($plugin_name)
+    {
+        $error_message = self::getDependenciesError([
+            'php' => '7.4',
+            'wordpress' => '6.0',
+            'woocommerce' => '7.0',
+        ], $plugin_name);
+
+        if ($error_message === false && !self::isDiscountRulesActive()) {
+            /* translators: %s: plugin name */
+            $error_message = sprintf(__('%s requires Woo Discount Rules to be installed and active.', 'wdr-wpml-compatibility'), $plugin_name);
+        }
+
+        if ($error_message === false && !self::isWdrV3Active()) {
+            /* translators: %s: plugin name */
+            $error_message = sprintf(__('%s requires Woo Discount Rules to be running in v3 mode.', 'wdr-wpml-compatibility'), $plugin_name);
+        }
+
+        if ($error_message === false) {
+            $error_message = self::getDependenciesError(['plugins' => [[
+                'name' => 'WPML',
+                'url' => 'https://wpml.org/',
+                'file' => 'sitepress-multilingual-cms/sitepress.php',
+            ]]], $plugin_name);
+        }
+
+        if (!empty($error_message)) {
+            self::adminNotice($error_message, 'error');
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Whether Woo Discount Rules (free or Pro) is active.
+     *
+     * @return bool
+     */
+    public static function isDiscountRulesActive()
+    {
+        return self::isActive('woo-discount-rules/woo-discount-rules.php')
+            || self::isActive('woo-discount-rules-pro/woo-discount-rules-pro.php')
+            || self::isActive('woo-discount-rules/woo-discount-rules-pro.php');
+    }
+
+    /**
+     * Whether Woo Discount Rules is actually running in v3 (Core) mode.
+     *
+     * A site can have v3.x installed but be switched back to embedded v2 mode via
+     * is_wdr_load_v2(); this addon only targets v3 Core and must stay inactive then.
+     *
+     * @return bool
+     */
+    public static function isWdrV3Active()
+    {
+        if (function_exists('is_wdr_load_v2') && is_wdr_load_v2()) {
+            return false;
+        }
+        if (!defined('WDR_PLUGIN_VERSION') || !self::isVersionAtLeast(WDR_PLUGIN_VERSION, '3.0.0')) {
+            return false;
+        }
+        return class_exists('\WDR\Core\Helpers\Plugin');
+    }
+
+    /**
+     * Compare versions ignoring any pre-release/build suffix (e.g. "3.0.0-RC2"), which
+     * version_compare() would otherwise rank below the plain release.
+     *
+     * @param string $version
+     * @param string $minimum
+     * @return bool
+     */
+    public static function isVersionAtLeast($version, $minimum)
+    {
+        $version = preg_replace('/[-+].*$/', '', (string)$version);
+        return version_compare($version, $minimum, '>=');
+    }
+
+    /**
      * Get all active plugins.
      *
      * @return array
@@ -65,11 +150,14 @@ class Plugin
      */
     public static function getData($file)
     {
-        $plugin_file = ABSPATH . 'wp-content/plugins/' . $file;
-        if (file_exists($plugin_file) && function_exists('get_plugin_data')) {
-            return get_plugin_data($plugin_file);
+        $plugin_file = WP_PLUGIN_DIR . '/' . $file;
+        if (!file_exists($plugin_file)) {
+            return [];
         }
-        return [];
+        if (!function_exists('get_plugin_data')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        return get_plugin_data($plugin_file, false, false);
     }
 
     /**
@@ -80,6 +168,9 @@ class Plugin
      */
     public static function getVersion($file)
     {
+        if ($file === 'woocommerce/woocommerce.php' && defined('WC_VERSION')) {
+            return WC_VERSION;
+        }
         $data = self::getData($file);
         return $data['Version'] ?? null;
     }
@@ -117,7 +208,7 @@ class Plugin
 
         if (!empty($requires['woocommerce'])) {
             $error = self::getDependenciesError(['plugins' => [[
-                'name' => 'Discount Rules',
+                'name' => 'WooCommerce',
                 'version' => $requires['woocommerce'],
                 'file' => 'woocommerce/woocommerce.php',
                 'url' => 'https://wordpress.org/plugins/woocommerce',
@@ -140,10 +231,12 @@ class Plugin
         }
 
         if (!empty($requires['wdr_pro'])) {
+            $pro_file = self::isActive('woo-discount-rules/woo-discount-rules-pro.php')
+                ? 'woo-discount-rules/woo-discount-rules-pro.php' : 'woo-discount-rules-pro/woo-discount-rules-pro.php';
             $error = self::getDependenciesError(['plugins' => [[
                 'name' => 'Discount Rules PRO',
                 'version' => $requires['wdr_pro'],
-                'file' => 'woo-discount-rules-pro/woo-discount-rules-pro.php',
+                'file' => $pro_file,
                 'url' => 'https://www.flycart.org/products/wordpress/woocommerce-discount-rules',
             ]]], $plugin_name);
             if ($error !== false) {
@@ -168,7 +261,7 @@ class Plugin
 
             if (!empty($plugin['version'])) {
                 $plugin_version = self::getVersion($plugin['file']);
-                if (!empty($plugin_version) && !version_compare($plugin_version, $plugin['version'], '>=')) {
+                if (!empty($plugin_version) && !self::isVersionAtLeast($plugin_version, $plugin['version'])) {
                     return empty($plugin_name) ? sprintf($version_requirement_short, $formatted_name, $plugin['version'])
                         : sprintf($version_requirement, $plugin_name, $formatted_name, $plugin['version']);
                 }

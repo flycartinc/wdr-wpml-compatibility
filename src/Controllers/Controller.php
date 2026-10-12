@@ -43,10 +43,6 @@ class Controller
      */
     public static function getAddedItemKey(string $cart_item_key): string
     {
-        if (!method_exists('\WDR\Core\Models\WC\Cart', 'getItems')) {
-            return $cart_item_key;
-        }
-
         foreach (\WDR\Core\Models\WC\Cart::getItems() as $key => $item) {
             if (isset($item['key']) && $item['key'] == $cart_item_key) {
                 return (string)$key;
@@ -58,10 +54,10 @@ class Controller
     /**
      * Recalculate cart total with processed language.
      */
-    public static function recalculateTotal($changes_detected)
+    public static function recalculateTotal($changes_detected = null)
     {
         $current_language = WPML::getCurrentLanguage();
-        if (!empty($current_language) && method_exists('\WDR\Core\Helpers\WC', 'setSession')) {
+        if (!empty($current_language)) {
             \WDR\Core\Helpers\WC::setSession('wdr_processed_wpml_language', $current_language);
         }
     }
@@ -71,10 +67,6 @@ class Controller
      */
     public static function removeInvalidAutoAddProducts()
     {
-        if (!method_exists('\WDR\Core\Helpers\WC', 'setSession')) {
-            return;
-        }
-
         global $woocommerce;
         $current_language = apply_filters('wpml_current_language', '');
         $processed_language = \WDR\Core\Helpers\WC::getSession('wdr_processed_wpml_language', '');
@@ -82,7 +74,9 @@ class Controller
             $auto_added_items = \WDR\Core\Helpers\WC::getSession('wdr_auto_added_items', []);
             if (!empty($auto_added_items) && is_object($woocommerce) && isset($woocommerce->cart)) {
                 foreach ($auto_added_items as $key => $data) {
-                    self::$removed_items[$key] = $woocommerce->cart->cart_contents[$key]['product_id'];
+                    if (isset($woocommerce->cart->cart_contents[$key]['product_id'])) {
+                        self::$removed_items[$key] = $woocommerce->cart->cart_contents[$key]['product_id'];
+                    }
                     unset($woocommerce->cart->cart_contents[$key]);
                 }
                 \WDR\Core\Helpers\WC::setSession('wdr_auto_added_items', null);
@@ -95,6 +89,33 @@ class Controller
                 }
             }
         }
+    }
+
+    /**
+     * WooCommerce Multilingual moves a cart line to its translation by changing the product object's id only (`set_id`),
+     * so the object keeps the original's categories, tags and attributes, and WDR's term filters and conditions keep
+     * matching the old language until the cart changes. Give the object the translation's terms; prices stay as they are.
+     * A variation reads its terms through the parent id (already the translation's) and its attributes from the line's
+     * translated `variation` slugs.
+     *
+     * @param array $cart_contents The new cart contents.
+     * @param array $old_cart_contents The cart contents before the switch.
+     * @param string $key The line's old key.
+     * @param string $new_key The line's new key.
+     * @return array
+     */
+    public static function translateSwitchedItemTerms($cart_contents, $old_cart_contents, $key, $new_key)
+    {
+        $item = $cart_contents[$new_key] ?? [];
+        if (empty($item['variation_id']) && isset($item['data']) && $item['data'] instanceof \WC_Product) {
+            $translation = wc_get_product($item['product_id']);
+            if ($translation) {
+                $item['data']->set_category_ids($translation->get_category_ids());
+                $item['data']->set_tag_ids($translation->get_tag_ids());
+                $item['data']->set_attributes($translation->get_attributes());
+            }
+        }
+        return $cart_contents;
     }
 
     /**
@@ -118,5 +139,33 @@ class Controller
     public static function checkIsValidProduct(bool $status, $product): bool
     {
         return $status && WPML::isCurrentLanguageProduct($product);
+    }
+
+    /**
+     * Allow this addon's and WPML's cart recalculation callbacks when WDR suppresses other
+     * plugins' `woocommerce_before_calculate_totals` callbacks.
+     *
+     * @param array $allowed_hooks
+     * @return array
+     */
+    public static function allowSuppressedHooks($allowed_hooks)
+    {
+        $allowed_hooks = (array)$allowed_hooks;
+        $allowed_hooks['woocommerce_before_calculate_totals'][] = __CLASS__ . '|removeInvalidAutoAddProducts';
+        return $allowed_hooks;
+    }
+
+    /**
+     * Unhook WPML's language-scoping term filters before WDR queries terms across languages.
+     */
+    public static function removeThirdPartyTermHooks()
+    {
+        global $sitepress;
+        if (empty($sitepress)) {
+            return;
+        }
+        remove_filter('get_terms_args', [$sitepress, 'get_terms_args_filter'], 10);
+        remove_filter('get_term', [$sitepress, 'get_term_adjust_id'], 1);
+        remove_filter('terms_clauses', [$sitepress, 'terms_clauses'], 10);
     }
 }
