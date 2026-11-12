@@ -20,6 +20,6 @@
   "require": {
     "php": ">=7.4",
     "ext-json": "*",
-    "yahnis-elsts/plugin-update-checker": "^5.4"
+    "yahnis-elsts/plugin-update-checker": "^6.0"
   }
 }

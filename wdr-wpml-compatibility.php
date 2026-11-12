@@ -37,8 +37,8 @@ if (!file_exists(WDR_WPML_PLUGIN_PATH . 'vendor/autoload.php')) {
 require WDR_WPML_PLUGIN_PATH . 'vendor/autoload.php';
 
 // init updater (runs regardless of dependencies so existing installs keep receiving updates)
-if (class_exists('YahnisElsts\PluginUpdateChecker\v5\PucFactory')) {
-    $updater = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+if (class_exists('YahnisElsts\PluginUpdateChecker\v6\PucFactory')) {
+    $updater = \YahnisElsts\PluginUpdateChecker\v6\PucFactory::buildUpdateChecker(
         'https://github.com/flycartinc/wdr-wpml-compatibility/',
         __FILE__,
         'wdr-wpml-compatibility'
